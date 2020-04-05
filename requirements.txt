@@ -1,0 +1,7 @@
+jinja2==2.11.1
+requests
+redis
+scrapy>=1.8
+scrapy-redis
+selenium
+mysqlclient

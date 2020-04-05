@@ -1,0 +1,5 @@
+include *.txt
+include *.rst
+include *.j2
+
+include LICENSE
