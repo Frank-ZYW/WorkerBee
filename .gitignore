@@ -2,4 +2,5 @@
 /.idea
 /dist
 /build
+/workerbee.egg-info
 *.pyc
