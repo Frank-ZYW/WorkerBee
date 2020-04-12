@@ -210,6 +210,6 @@ class Monitor(object):
                 'error': error, 'msg': msg,
             }
             try:
-                requests.post(self.server_api, data=data, timeout=5)
+                requests.post(self.server_api % spider.name, data=data, timeout=5)
             except Exception as e:
                 logger.error(e)
