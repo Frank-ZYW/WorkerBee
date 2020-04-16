@@ -53,6 +53,7 @@ default
        │   ├── settings.py
        │   └── spiders
        │       			└── __init__.py
+       ├─ __version__.py
        └─ scrapy.cfg
 ```
 
