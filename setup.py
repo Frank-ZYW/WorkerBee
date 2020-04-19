@@ -41,7 +41,7 @@ setup(
     author='Frank Zhu',
     author_email='Frank_zhu_@outlook.com',
     python_requires='>=3.6.0',
-    url='https://github.com/WorkerBee/WorkerBee',
+    url='https://github.com/Frank-ZYW/WorkerBee',
     packages=find_packages(exclude='tests'),
     install_requires=read_requirements('requirements.txt'),
     include_package_data=True,
