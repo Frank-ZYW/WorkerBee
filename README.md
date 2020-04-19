@@ -333,3 +333,197 @@ Selenium不支持Scrapy自带的`HttpProxyMiddleware`模块提供的代理功能
 ```python
 'socks5://127.0.0.1:1081'
 ```
+
+
+
+## Client
+
+WorkerBee完全可以单机独立单次运行，但如果希望更好的配合 [PyHive](https://github.com/Frank-ZYW/PyHive) 完成爬虫服务的长期部署、GUI运行调度，需要借助 [Scrapyd](https://github.com/scrapy/scrapyd) 构建可供PyHive控制的从机客户端
+
+- 以下部署过程仅完全适用`RedHat/CentOS`系列Linux
+
+
+
+### **Chrome**
+
+Chrome用于支持某些需要使用selenium的爬虫运行
+
+下载最新版本的安装包，在当前路径下保存
+
+```shell
+$ wget https://dl.google.com/linux/direct/google-chrome-stable_current_x86_64.rpm 
+```
+
+通过yum来安装rpm包
+
+```shell
+$ yum install -y google-chrome-stable_current_x86_64.rpm
+```
+
+查看Chrome版本
+
+```shell
+$ /opt/google/chrome/chrome --version
+```
+
+测试（使用百度主页），截图被保存则安装成功
+
+```shell
+$ google-chrome-stable --no-sandbox --headless --disable-gpu --screenshot https://www.baidu.com/
+
+# result
+[0307/195726.201193:INFO:headless_shell.cc(619)] Written to file screenshot.png.
+```
+
+
+
+### **ChromeDriver**
+
+ChromeDriver是Selenium控制Chrome的桥梁，ChromeDriver与Chrome的版本紧密相关，请根据你所安装的Chrome版本，前往 [ChromeDriver官方站点](https://chromedriver.chromium.org/) 下载对应的ChromeDriver并放置在系统的路径下，Selenium将会自动检索该路径。当然，您也可以放置在任意目录下，但需要在代码中明确告知Selenium具体的存放路径
+
+生产环境不建议频繁对Chrome进行升级，如若必须升级请检查ChromeDriver的适配性
+
+
+
+### **Scrapyd**
+
+Scrapyd是Scrapy官方提供的用于运行Scrapy蜘蛛的服务，它允许使用HTTP JSON API部署Scrapy项目并控制蜘蛛运行
+
+```shell
+$ pip install scrapyd
+```
+
+编写配置文件设定Scrapyd运行参数
+
+新建以下目录、文件
+
+```shell
+$ sudo mkdir -p /etc/scrapyd
+$ sudo vim /etc/scrapyd/scrapyd.conf
+```
+
+写入:
+
+```tex
+[scrapyd]
+eggs_dir = /etc/scrapyd/eggs
+logs_dir = /etc/scrapyd/logs
+items_dir =
+jobs_to_keep = 5
+dbs_dir = /etc/scrapyd/dbs
+max_proc = 5
+max_proc_per_cpu = 5
+finished_to_keep = 100
+poll_interval = 5.0
+bind_address = 0.0.0.0
+http_port = 6800
+runner = scrapyd.runner
+application = scrapyd.app.application
+launcher = scrapyd.launcher.Launcher
+webroot = scrapyd.website.Root
+
+[services]
+schedule.json = scrapyd.webservice.Schedule
+cancel.json = scrapyd.webservice.Cancel
+addversion.json = scrapyd.webservice.AddVersion
+listprojects.json = scrapyd.webservice.ListProjects
+listversions.json = scrapyd.webservice.ListVersions
+listspiders.json = scrapyd.webservice.ListSpiders
+delproject.json = scrapyd.webservice.DeleteProject
+delversion.json = scrapyd.webservice.DeleteVersion
+listjobs.json = scrapyd.webservice.ListJobs
+daemonstatus.json = scrapyd.webservice.DaemonStatus
+```
+
+参数含义、HTTP JSON API及更多配置请参考 [Scrapyd官方文档](https://scrapyd.readthedocs.io/en/stable/config.html)
+
+
+
+### **WorkerBee**
+
+WorkerBee爬虫将在Scrapyd调度下工作，请将WorkerBee安装至Scrapyd所在的Python环境
+
+
+
+### **Supervisor**
+
+Supervisor是一个由Python编写的进程守护工具，其可以起到保护Scrapyd应用进程的作用
+
+首先更新系统软件包
+
+```shell
+$ sudo yum update -y
+```
+
+CentOS 7默认信息库中没有Supervisor，需要预先安装EPEL信息库
+
+```shell
+$ sudo yum install epel-release
+```
+
+更新并安装Supervisor
+
+```shell
+$ sudo yum update
+$ sudo yum -y install supervisor
+```
+
+安装完成后可以在 `/etc` 目录下找到以下文件和目录（`Debian/Ubuntu`系列Linux中位于 `/etc/supervisor` 目录下）
+
+```shell
+$ /etc/supervisord.conf  # 主配置文件
+$ /etc/supervisord.d  # 应用配置文件夹，用于存放需要supervisor守护的应用的相关配置文件
+```
+
+新建配置文件
+
+```shell
+$ sudo vim /etc/supervisord.d/scrapyd.ini
+```
+
+**配置文件的类型和存放路径可以改变，详见 `supervisord.conf` 文件最后几行内容，如有需求可根据需要自行修改
+
+```ini
+[include]
+files = supervisord.d/*.ini
+```
+
+写入、保存
+
+```ini
+# supervisor不通过bash启动所以不会读取系统环境变量，需手动添加
+[supervisord]
+environment=http_proxy=http://127.0.0.1:8081,https_proxy=http://127.0.0.1:8081
+
+[program:scrapyd]
+command=/path/to/your/python/env/bin/scrapyd
+stdout_logfile=/etc/scrapyd/run.log
+user=root
+autostart=true
+autorestart=true
+redirect_stderr=True
+```
+
+使用以下命令启动Supervisor并允许其在系统自启引导时自动加载
+
+```shell
+$ sudo systemctl start supervisord
+$ sudo systemctl enable supervisord
+```
+
+检查所有守护进程状态
+
+```shell
+$ supervisorctl
+```
+
+Scrapyd默认服务位于6800端口，测试API
+
+```shell
+$ curl http://localhost:6800/daemonstatus.json
+
+# result
+{"node_name": "demo", "status": "ok", "pending": 0, "running": 0, "finished": 0}
+```
+
+更多Supervisor操作、配置请参见[Supervisor官方文档](http://supervisord.org/)
