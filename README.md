@@ -274,10 +274,10 @@ WorkerBee实现了一个自适应Mysql管道，可根据Item的结构自动改�
 
 `MONITOR_SERVER_API`
 
-Server端用于接收反馈信息的接口，接口字符串中需要保留一个`%s`，该位置将被爬虫名替代，例如：
+Server端用于接收反馈信息的接口，接口字符串中需要保留一个`<spider_name>`，该位置将被爬虫名替代，例如：
 
 ```shell
-'http://192.168.1.72:8000/api/spider/%s/feedback'
+'http://127.0.0.1:8000/api/spider/<spider_name>/feedback'
 ```
 
 在`MONITOR_FEEDBACK`属性为`False`时该属性无效
@@ -475,7 +475,7 @@ $ /etc/supervisord.conf  # 主配置文件
 $ /etc/supervisord.d  # 应用配置文件夹，用于存放需要supervisor守护的应用的相关配置文件
 ```
 
-新建配置文件
+新建应用配置文件
 
 ```shell
 $ sudo vim /etc/supervisord.d/scrapyd.ini
@@ -493,6 +493,7 @@ files = supervisord.d/*.ini
 ```ini
 # supervisor不通过bash启动所以不会读取系统环境变量，需手动添加
 [supervisord]
+# 代理环境变量样例
 environment=http_proxy=http://127.0.0.1:8081,https_proxy=http://127.0.0.1:8081
 
 [program:scrapyd]
