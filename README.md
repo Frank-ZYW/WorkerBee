@@ -10,6 +10,8 @@ Data filter components Based on Scrapy, Scrapy-Redis
 
 WorkerBee的诞生源自于使用原生Scrapy-Redis时发现的一些不足之处，例如URL去重持久化是存判同时进行，如果后续流程出错，那么此条数据将不会再被访问和捕捉；针对一些需要爬取更新且无法使用URL去重的应用场景，Scrapy-Redis没有提供数据级别的去重方案
 
+![](./doc/img/compare.png)
+
 WorkerBee修改了一小部分Scrapy-Redis的业务逻辑，将URL的持久化后移`Pipeline`进行，改造`Item`使其能生成数据指纹并使用布隆过滤器实现数据去重，适用于数据规模较小、数据质量要求高并且需要更新增量的应用场景
 
 
