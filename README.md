@@ -224,7 +224,7 @@ WorkerBee实现了一个自适应Mysql管道，可根据Item的结构自动改�
 
 `MYSQL_UPSERT`    `default False`
 
-以更新方式插入数据
+**不执行数据去重**且添加数据时如有主键重复则执行更新，否则正常插入
 
 
 

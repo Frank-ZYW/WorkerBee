@@ -23,7 +23,7 @@ class MysqlPipeline(object):
         :param redis_server: Redis client instance
         :param mysql_pool: Mysql connection pool
         :param table: Mysql table to save item
-        :param upsert: True if use update or create to insert data
+        :param upsert: True if use update or create to add data & avoid data filter
         """
         self.redis_server = redis_server
         self.bloomfilter = BloomFilter(redis_server, blocknum=blocknum)
@@ -45,7 +45,7 @@ class MysqlPipeline(object):
                 charset=settings.get('MYSQL_CHARSET', 'utf8'),
             ),
             'table': settings.get('MYSQL_TABLE'),
-            'upsert': settings.get('MYSQL_UPSERT', False),
+            'upsert': settings.getbool('MYSQL_UPSERT', False),
             'blocknum': settings.getint('REDIS_BLOCKNUM', 2)
         }
         return cls(**params)
@@ -61,7 +61,7 @@ class MysqlPipeline(object):
         request = item.pop('request', None)
         item_fingerprint = item.fingerprint()
         data_exist = True
-        if not self.bloomfilter.isContains(item_fingerprint):
+        if self.upsert or not self.bloomfilter.isContains(item_fingerprint):
             sql, values = self._generate_sql(item)
             try:
                 tb.execute(sql, values)
